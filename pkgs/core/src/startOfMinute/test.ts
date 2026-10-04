@@ -5,6 +5,20 @@ import { assertType } from "../_lib/test/index.ts";
 import { startOfMinute } from "./index.ts";
 
 describe("startOfMinute", () => {
+  const repeatedMinutes = [
+    ["Europe/Vienna", "2023-10-29T01:06:45.678Z", "2023-10-29T01:06:00.000Z"],
+    [
+      "America/New_York",
+      "2023-11-05T06:06:45.678Z",
+      "2023-11-05T06:06:00.000Z",
+    ],
+    [
+      "Australia/Lord_Howe",
+      "2023-04-01T15:15:45.678Z",
+      "2023-04-01T15:15:00.000Z",
+    ],
+  ];
+
   it("returns the date with the time set to the first millisecond of a minute", () => {
     const date = new Date(2014, 11 /* Dec */, 1, 22, 15, 45, 400);
     const result = startOfMinute(date);
@@ -40,7 +54,39 @@ describe("startOfMinute", () => {
     assertType<assertType.Equal<UTCDate, typeof result>>(true);
   });
 
+  it("rounds a UTCDate using its UTC seconds", () => {
+    const date = new UTCDate("1890-01-01T00:00:45.678Z");
+    const result = startOfMinute(date);
+    expect(result).toBeInstanceOf(UTCDate);
+    expect(result.toISOString()).toBe("1890-01-01T00:00:00.000Z");
+    expect(date.toISOString()).toBe("1890-01-01T00:00:45.678Z");
+  });
+
+  it.each(repeatedMinutes)(
+    "preserves the repeated minute of a TZDate in %s",
+    (timeZone, input, expected) => {
+      const date = new TZDate(input, timeZone);
+      const result = startOfMinute(date);
+      expect(result).toBeInstanceOf(TZDate);
+      expect(result.timeZone).toBe(timeZone);
+      expect(+result).toBe(+new Date(expected));
+      expect(+startOfMinute(result)).toBe(+result);
+      expect(+date).toBe(+new Date(input));
+      assertType<assertType.Equal<TZDate, typeof result>>(true);
+    },
+  );
+
   describe("context", () => {
+    it.each(repeatedMinutes)(
+      "preserves the repeated minute in the %s context",
+      (timeZone, input, expected) => {
+        const result = startOfMinute(input, { in: tz(timeZone) });
+        expect(result).toBeInstanceOf(TZDate);
+        expect(result.timeZone).toBe(timeZone);
+        expect(+result).toBe(+new Date(expected));
+      },
+    );
+
     it("allows to specify the context", () => {
       expect(
         startOfMinute("2024-04-10T07:12:34.567Z", {

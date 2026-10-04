@@ -38,6 +38,14 @@ export function startOfMinute<
   options?: StartOfMinuteOptions<ResultDate> | undefined,
 ): ResultDate {
   const date_ = toDate(date, options?.in);
-  date_.setSeconds(0, 0);
+  const time = +date_;
+  // Subtract elapsed time to preserve the occurrence of a repeated local minute.
+  date_.setTime(time - date_.getSeconds() * 1000 - date_.getMilliseconds());
+  // Historical offset changes can leave only part of a minute. In that case,
+  // preserve the local setter's handling of the transition.
+  if (date_.getSeconds() !== 0) {
+    date_.setTime(time);
+    date_.setSeconds(0, 0);
+  }
   return date_;
 }
